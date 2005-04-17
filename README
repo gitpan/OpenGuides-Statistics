@@ -1,0 +1,35 @@
+NAME
+
+OpenGuides::Statistics - generate graphs of the number of nodes on an OpenGuides site
+
+DESCRIPTION
+This module will read your OpenGuides (http://search.cpan.org/dist/OpenGuides/) 
+database and produce Chart::Strip graphs of the data therein to show you how 
+fast you've accumulated nodes.
+
+INSTALLING
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    
+then as root
+
+    ./Build install
+    
+for a local install, replace the first step with:
+
+    perl Build.PL install_path=lib=/path/to/my/modules/
+    
+AUTHOR
+
+Earle Martin <EMARTIN@cpan.org>
+
+* http://purl.oclc.org/net/earlemartin/
+
+LEGAL
+
+Copyright 2005 Earle Martin.
+
+This module is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.

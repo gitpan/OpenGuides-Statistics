@@ -1,0 +1,20 @@
+--- #YAML:1.0
+name: OpenGuides-Statistics
+version: 1
+author:
+  - Earle Martin <EMARTIN@cpan.org>
+abstract: |-
+  generate graphs of the number of nodes on an OpenGuides site
+license: perl
+requires:
+  Chart::Strip: 0
+  DBI: 0
+  OpenGuides: 0.46
+  OpenGuides::Config: 0
+  POSIX: 0
+  Scalar::Util: 0
+provides:
+  OpenGuides::Statistics:
+    file: lib/OpenGuides/Statistics.pm
+    version: 1
+generated_by: Module::Build version 0.25

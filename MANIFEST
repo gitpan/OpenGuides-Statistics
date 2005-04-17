@@ -1,0 +1,8 @@
+Build.PL
+MANIFEST
+META.yml
+README
+examples/graph.pl
+lib/OpenGuides/Statistics.pm
+t/basic.t
+t/wiki.conf
