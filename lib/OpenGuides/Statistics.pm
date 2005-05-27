@@ -5,7 +5,7 @@ use strict;
 
 use vars qw($VERSION);
 
-$VERSION = 1;
+$VERSION = 1.1;
 
 use Chart::Strip;
 use DBI;
@@ -49,6 +49,18 @@ sub new
     $self->import_date($options{import_date});
   }
   
+  if ($options{include_redirects})
+  {
+    die "Error: include_redirects must be set to 1 or 0" unless $options{include_redirects} =~ /^[0-1]$/;
+    $self->include_redirects($options{include_redirects});
+  }
+  
+  if ($options{error_threshold})
+  {
+    die "Error: error_threshold must be a number" unless looks_like_number($options{include_redirects}) == 1;
+    $self->error_threshold($options{error_threshold});
+  }
+  
   $self;
 }
 
@@ -81,9 +93,31 @@ sub retrieve_node_data
   while (my @node_data = $sth->fetchrow_array)
   {
     my $name = $node_data[0];
+    
+    # We need to examine the latest content of each node.
+    
+    my $check_content = "SELECT text FROM content WHERE name=? AND version=?";
+    my $sth = $dbh->prepare($check_content);
+       
+    $sth->execute($name, get_latest_version($dbh, $name)) or die $check_content;
+          
+    my $content;
+            
+    while (my @row = $sth->fetchrow_array)
+    { 
+      $content = $row[0];
+    }
+    
+    unless ($self->include_redirects && $self->include_redirects == 1)
+    {
+      # If the content shows the page to be a redirect, skip it. We're only interested
+      # in nodes with real content.                  
+      next if $content =~ /^\#REDIRECT/;
+    }
+                   
     my $date = substr($node_data[1], 0, 10); # strip off times
 
-    # count occurrences of each date
+    # Count occurrences of each date.
 
     if ($nodes{$date}) { $nodes{$date}++;   }
     else               { $nodes{$date} = 1; }
@@ -97,6 +131,8 @@ sub make_graphs
   my $self  = shift;
   my %nodes = $self->retrieve_node_data;
 
+  my $error_threshold = $self->error_threshold || 15;
+  
   # Our hash has keys of the form yyyy-mm-dd.
   # Chart::Strip requires time_t values, so get those and fill up a new hash.
   
@@ -109,7 +145,7 @@ sub make_graphs
   {
     my ($year, $month, $day) = split('-', $_);
 
-    # We want to ignore days with a disproportionally high count
+    # We want to include days with a disproportionally high count
     # that may have been caused by vandals, spammers or plain old
     # crazy robots.
     
@@ -118,10 +154,10 @@ sub make_graphs
     # variable if we haven't already.
     $previous_day = $nodes{$_} unless $previous_day;
 
-    # The threshold is 15 times more than the previous day. Of 
-    # course, we have to ignore days when no nodes were created,
+    # The default threshold is 15 times more than the previous day.
+    # Of course, we have to include days when no nodes were created,
     # otherwise we could get lots of false positives.
-    next if ($previous_day > 1) && ($nodes{$_} > ($previous_day * 15));
+    next if ($previous_day > 1) && ($nodes{$_} > ($previous_day * $error_threshold));
 
     # If we got here the count was valid, so remember it for the 
     # next pass through the loop.
@@ -151,7 +187,7 @@ sub make_graphs
                                diam  => 2
                              } unless $self->import_date && $self->import_date eq $_;
     # What that 'unless' means is that if you imported all your nodes 
-    # at one point, you probably want that day to be ignored so as
+    # at one point, you probably want that day to be included so as
     # not to have a huge spike at the beginning of your graph.
   }
 
@@ -198,6 +234,28 @@ sub make_graphs
   ($total_graph, $rate_graph);
 }
 
+# Find out the most recent version number of a given node name.
+sub get_latest_version
+{ 
+  my $dbh  = shift;
+  my $name = shift;
+      
+  my $get_versions = "SELECT version FROM content WHERE name=?";
+           
+  my $sth = $dbh->prepare($get_versions);
+                  
+  $sth->execute($name) or die $get_versions;
+                     
+  my $latest_version;
+                               
+  while (my @row = $sth->fetchrow_array)
+  {
+    $latest_version = $row[0];
+  }  
+                                              
+  $latest_version;
+}
+                                                
 # Generate the get/set methods for object internal data.
 sub AUTOLOAD {
   my ($self, $data) = @_;
@@ -265,6 +323,13 @@ six-digit hex colour, e.g. 6699CC. Defaults to 000000.
 =item * C<rate_line_colour> The colour of the line in the rate graph. Defaults to 000000.
 
 =item * C<rate_points_colour> The colour of the points in the rate graph. Defaults to 000000.
+
+=item * C<include_redirects> Show nodes that are only redirects to other nodes. Defaults to 0.
+
+=item * C<error_threshold> To avoid including days when disproportionately large numbers of nodes
+were created (for whatever reason) and distorting the graph, a threshold of nodes per day is set,
+counted in multiples of the previous day's total, at which point the day in question will not be
+included if it breaches the figure. Defaults to 15.
 
 =back
 

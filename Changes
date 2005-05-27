@@ -1,0 +1,7 @@
+2005-05-27: v1.1
+
+- New include_redirects and error_threshold options.
+
+2005-04-17: v1
+
+- Initial release.
