@@ -1,3 +1,8 @@
+2005-08-06: v1.2
+
+- Clean up the code quite a bit.
+- Drop the error threshold thing as it wasn't working too well.
+
 2005-05-27: v1.1
 
 - New include_redirects and error_threshold options.
